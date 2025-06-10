@@ -1,0 +1,20 @@
+/**
+ * OMS 폼 필드 스타일
+ */
+
+.oms-form-field {
+  margin-bottom: 16px; /* ComponentSpacing.form.fieldGap */
+}
+
+.oms-form-field:last-child {
+  margin-bottom: 0;
+}
+
+.oms-form-field .bp5-form-helper-text {
+  font-size: 12px;
+  margin-top: 4px; /* ComponentSpacing.form.labelGap */
+}
+
+.oms-form-field .bp5-intent-danger .bp5-form-helper-text {
+  color: var(--color-status-danger);
+}
