@@ -1,91 +1,53 @@
-# Ontology Metadata Service (OMS)
+# OMS (Order Management System)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/openfoundry/oms)](https://goreportcard.com/report/github.com/openfoundry/oms)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## 프로젝트 개요
+이 프로젝트는 주문 관리 시스템(OMS)을 구현한 것입니다.
 
-## 📖 개요
+## 프로젝트 구조
+```
+OMS/
+├── README.md           # 프로젝트 문서
+├── requirements.txt    # Python 의존성 파일
+├── src/               # 소스 코드
+│   ├── api/          # API 관련 코드
+│   ├── core/         # 핵심 비즈니스 로직
+│   ├── models/       # 데이터 모델
+│   └── utils/        # 유틸리티 함수
+├── tests/            # 테스트 코드
+├── docs/             # 문서
+└── scripts/          # 유틸리티 스크립트
+```
 
-Ontology Metadata Service (OMS)는 OpenFoundry 플랫폼의 핵심 메타데이터 관리 서비스입니다. 조직의 비즈니스 개체와 관계를 정의하는 스키마 레지스트리로, Palantir Foundry의 Ontology 철학을 계승하여 데이터를 현실 세계의 객체로 추상화하는 구조적 정의를 제공합니다.
+## 기술 스택
+- Backend: Python
+- Database: PostgreSQL
+- API: FastAPI
+- Frontend: React (예정)
 
-### 주요 기능
-
-- 🏗️ **스키마 레지스트리**: 조직 전체의 통일된 객체 정의
-- 💼 **비즈니스 친화적**: 기술 용어가 아닌 비즈니스 용어로 모델링
-- 🔄 **확장 가능한 설계**: 향후 서비스 통합을 위한 견고한 기반
-- 📊 **메타데이터 관리**: 객체의 속성과 관계 정의
-- 🔍 **검색 기능**: 강력한 검색 및 필터링 기능
-- 📝 **버전 관리**: 모든 변경사항 추적 및 관리
-
-## 🚀 시작하기
-
-### 필수 요구사항
-
-- Go 1.21+
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
-- Docker & Docker Compose
-
-### 빠른 시작
-
+## 시작하기
 1. 저장소 클론
 ```bash
-git clone https://github.com/openfoundry/oms.git
-cd oms
+git clone [repository-url]
+cd OMS
 ```
 
-2. 백엔드 설정
+2. 가상환경 설정
 ```bash
-cd backend
-go mod download
-docker-compose up -d  # PostgreSQL & Redis 시작
-go run cmd/server/main.go
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 또는
+.\venv\Scripts\activate  # Windows
 ```
 
-3. 프론트엔드 설정
+3. 의존성 설치
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+pip install -r requirements.txt
 ```
 
-자세한 설정 가이드는 [TEAM_QUICKSTART.md](Claude.docs/TEAM_QUICKSTART.md)를 참조하세요.
+## 개발 가이드라인
+- 모든 코드는 PEP 8 스타일 가이드를 준수합니다.
+- 모든 함수와 클래스에는 한국어로 된 상세한 문서화 주석이 포함되어야 합니다.
+- 테스트 커버리지는 최소 80% 이상을 유지해야 합니다.
 
-## 📚 문서
-
-- [제품 요구사항 문서 (PRD)](Claude.docs/PRD.md)
-- [백엔드 개발 가이드](Claude.docs/Backend.md)
-- [프론트엔드 개발 가이드](Claude.docs/Frontend.md)
-- [디자인 시스템](Claude.docs/design-system.md)
-- [팀 퀵스타트 가이드](Claude.docs/TEAM_QUICKSTART.md)
-
-## 🏗️ 아키텍처
-
-OMS는 다음과 같은 주요 컴포넌트로 구성됩니다:
-
-- **Backend**: Go 기반의 GraphQL/REST API 서버
-- **Frontend**: React + TypeScript 기반의 웹 인터페이스
-- **Database**: PostgreSQL을 사용한 메타데이터 저장
-- **Cache**: Redis를 사용한 성능 최적화
-
-## 🤝 기여하기
-
-1. 이슈 생성 또는 기존 이슈 확인
-2. 브랜치 생성 (`feature/`, `fix/`, `docs/` 등)
-3. 변경사항 커밋
-4. Pull Request 생성
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
-## 👥 팀
-
-- Backend Team: [@backend-team](https://github.com/orgs/openfoundry/teams/backend-team)
-- Frontend Team: [@frontend-team](https://github.com/orgs/openfoundry/teams/frontend-team)
-- DevOps Team: [@devops-team](https://github.com/orgs/openfoundry/teams/devops-team)
-
-## 📞 지원
-
-- 이슈 트래커: [GitHub Issues](https://github.com/openfoundry/oms/issues)
-- 이메일: support@openfoundry.io
+## 라이선스
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
