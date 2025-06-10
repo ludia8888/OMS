@@ -1,0 +1,53 @@
+{
+  "name": "oms-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.13.8",
+    "@blueprintjs/core": "^5.19.0",
+    "@blueprintjs/icons": "^5.22.0",
+    "@blueprintjs/popover2": "^2.1.31",
+    "@blueprintjs/select": "^5.3.20",
+    "@blueprintjs/table": "^5.3.14",
+    "@tanstack/react-query": "^5.80.6",
+    "axios": "^1.9.0",
+    "graphql": "^16.11.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/react-router-dom": "^5.3.3",
+    "@typescript-eslint/eslint-plugin": "^8.34.0",
+    "@typescript-eslint/parser": "^8.34.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "^9.25.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-sonarjs": "^3.0.2",
+    "eslint-plugin-unicorn": "^59.0.1",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
+    "prettier": "^3.5.3",
+    "sass": "^1.89.2",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "vite": "^6.3.5"
+  }
+}
