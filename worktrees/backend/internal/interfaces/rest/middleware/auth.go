@@ -3,12 +3,13 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Auth creates an authentication middleware
+// Auth creates an authentication middleware with enhanced security
 func Auth(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get authorization header
@@ -29,31 +30,64 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Parse and validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Validate signing method
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
-			}
+		// Parse and validate token with options
+		parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
+		token, err := parser.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
 		})
 
-		if err != nil || !token.Valid {
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid token",
+				"details": err.Error(),
 			})
 			return
 		}
 
-		// Extract claims
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			// Set user ID in context
-			if userID, ok := claims["sub"].(string); ok {
-				c.Set("user_id", userID)
-			}
-			
-			// Set user roles in context
-			if roles, ok := claims["roles"].([]interface{}); ok {
+		// Validate claims
+		claims, ok := token.Claims.(*jwt.RegisteredClaims)
+		if !ok || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid token claims",
+			})
+			return
+		}
+
+		// Validate time-based claims
+		now := time.Now()
+		
+		// Check expiration
+		if claims.ExpiresAt != nil && now.After(claims.ExpiresAt.Time) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "token expired",
+			})
+			return
+		}
+
+		// Check not before
+		if claims.NotBefore != nil && now.Before(claims.NotBefore.Time) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "token not yet valid",
+			})
+			return
+		}
+
+		// Check issued at
+		if claims.IssuedAt != nil && now.Before(claims.IssuedAt.Time) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "token issued in the future",
+			})
+			return
+		}
+
+		// Set user ID in context
+		if claims.Subject != "" {
+			c.Set("user_id", claims.Subject)
+		}
+		
+		// Extract custom claims for roles
+		if customClaims, ok := token.Claims.(jwt.MapClaims); ok {
+			if roles, ok := customClaims["roles"].([]interface{}); ok {
 				c.Set("user_roles", roles)
 			}
 		}
