@@ -1,142 +1,74 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/openfoundry/oms/internal/config"
-	"github.com/openfoundry/oms/internal/domain/service"
-	"github.com/openfoundry/oms/internal/infrastructure/cache"
-	"github.com/openfoundry/oms/internal/infrastructure/database"
-	"github.com/openfoundry/oms/internal/infrastructure/messaging"
-	"github.com/openfoundry/oms/internal/infrastructure/persistence/postgres"
-	"github.com/openfoundry/oms/internal/interfaces/rest"
 	"github.com/openfoundry/oms/internal/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
-	// Initialize logger
+	logger := initializeLogger()
+	defer logger.Sync()
+
+	cfg := loadConfiguration(logger)
+	deps := initializeDependencies(cfg, logger)
+	defer deps.Close()
+
+	server := createHTTPServer(cfg, deps.Services, logger)
+	startServer(server, logger)
+
+	waitForShutdownSignal()
+	shutdownServer(server, logger)
+}
+
+// initializeLogger initializes the application logger
+func initializeLogger() *zap.Logger {
 	logger, err := logger.NewLogger()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
 
-	logger.Info("Starting OMS Backend Server...")
+	logger.Info("Logger initialized")
+	return logger
+}
 
-	// Load configuration
+// loadConfiguration loads application configuration
+func loadConfiguration(logger *zap.Logger) *config.Config {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Fatal("Failed to load configuration", "error", err)
+		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
-	// Initialize database
-	db, err := database.NewPostgresDB(cfg.Database)
+	logger.Info("Configuration loaded")
+	return cfg
+}
+
+// initializeDependencies initializes all application dependencies
+func initializeDependencies(cfg *config.Config, logger *zap.Logger) *Dependencies {
+	logger.Info("Initializing application dependencies...")
+
+	db, err := initializeDatabase(cfg, logger)
 	if err != nil {
-		logger.Fatal("Failed to initialize database", "error", err)
-	}
-	defer db.Close()
-
-	// Run migrations
-	if err := database.RunMigrations(db, cfg.Database.MigrationsPath); err != nil {
-		logger.Fatal("Failed to run migrations", "error", err)
+		logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 
-	// Initialize Redis cache
-	redisCache, err := cache.NewRedisCache(
-		cfg.Cache.RedisAddr,
-		cfg.Cache.RedisPassword,
-		cfg.Cache.RedisDB,
-		time.Duration(cfg.Cache.TTL)*time.Second,
-		logger,
-	)
+	redisCache, err := initializeCache(cfg, logger)
 	if err != nil {
-		logger.Fatal("Failed to initialize Redis cache", "error", err)
-	}
-	defer redisCache.Close()
-
-	// Initialize Kafka publisher
-	kafkaPublisher := messaging.NewKafkaPublisher(
-		cfg.EventBus.KafkaBrokers,
-		cfg.EventBus.KafkaTopic,
-		logger,
-	)
-	defer kafkaPublisher.Close()
-
-	// Initialize repositories
-	objectTypeRepo := postgres.NewObjectTypeRepository(db, logger)
-	linkTypeRepo := postgres.NewLinkTypeRepository(db, logger)
-
-	// Initialize caches
-	objectTypeCache := cache.NewObjectTypeCache(redisCache)
-	linkTypeCache := cache.NewLinkTypeCache(redisCache)
-
-	// Initialize event publishers
-	objectTypeEventPublisher := messaging.NewObjectTypeEventPublisher(kafkaPublisher)
-	linkTypeEventPublisher := messaging.NewLinkTypeEventPublisher(kafkaPublisher)
-
-	// Initialize services
-	objectTypeService := service.NewObjectTypeService(
-		objectTypeRepo,
-		objectTypeCache,
-		objectTypeEventPublisher,
-		logger,
-	)
-
-	linkTypeService := service.NewLinkTypeService(
-		linkTypeRepo,
-		objectTypeRepo,
-		linkTypeCache,
-		linkTypeEventPublisher,
-		logger,
-	)
-
-	// Create services container
-	services := &rest.Services{
-		ObjectTypeService: objectTypeService,
-		LinkTypeService:   linkTypeService,
+		logger.Fatal("Failed to initialize Redis cache", zap.Error(err))
 	}
 
-	// Initialize router
-	router := rest.NewRouter(cfg, services, logger)
+	kafkaPublisher := initializeMessaging(cfg, logger)
 
-	// Create HTTP server
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+	deps := &Dependencies{
+		DB:             db,
+		RedisCache:     redisCache,
+		KafkaPublisher: kafkaPublisher,
 	}
 
-	// Start server in a goroutine
-	go func() {
-		logger.Info("Server starting", "port", cfg.Server.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", "error", err)
-		}
-	}()
+	deps.Services = initializeServices(deps, logger)
 
-	// Wait for interrupt signal to gracefully shutdown the server
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	logger.Info("Shutting down server...")
-
-	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown", "error", err)
-	}
-
-	logger.Info("Server exited")
+	logger.Info("All dependencies initialized successfully")
+	return deps
 }

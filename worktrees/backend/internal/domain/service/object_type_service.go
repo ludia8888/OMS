@@ -22,18 +22,17 @@ type ObjectTypeService struct {
 }
 
 // NewObjectTypeService creates a new object type service
-func NewObjectTypeService(
-	repo repository.ObjectTypeRepository,
-	cache cache.CacheService,
-	publisher messaging.EventPublisher,
-	logger *zap.Logger,
-) *ObjectTypeService {
-	return &ObjectTypeService{
-		repo:      repo,
-		cache:     cache,
-		publisher: publisher,
-		logger:    logger,
+func NewObjectTypeService(config ObjectTypeServiceConfig) (*ObjectTypeService, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
+
+	return &ObjectTypeService{
+		repo:      config.Repository,
+		cache:     config.Cache,
+		publisher: config.EventPublisher,
+		logger:    config.Logger,
+	}, nil
 }
 
 // CreateObjectTypeInput represents input for creating an object type

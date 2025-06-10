@@ -17,6 +17,12 @@ dist-ssr
 .env.local
 .env.production
 
+# Backend files (prevent accidental commits from frontend worktree)
+../backend/
+../Claude.docs/
+../.github/
+../.husky/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

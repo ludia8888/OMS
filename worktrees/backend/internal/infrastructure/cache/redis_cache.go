@@ -21,7 +21,12 @@ type RedisCache struct {
 }
 
 // NewRedisCache creates a new Redis cache instance
-func NewRedisCache(addr, password string, db int, ttl time.Duration, logger *zap.Logger) (*RedisCache, error) {
+func NewRedisCache(config RedisConfig) (*RedisCache, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
+	addr, password, db, ttl, logger := config.Addr, config.Password, config.DB, config.TTL, config.Logger
 	client := redis.NewClient(&redis.Options{
 		Addr:         addr,
 		Password:     password,

@@ -23,20 +23,18 @@ type LinkTypeService struct {
 }
 
 // NewLinkTypeService creates a new link type service
-func NewLinkTypeService(
-	repo repository.LinkTypeRepository,
-	objectTypeRepo repository.ObjectTypeRepository,
-	cache cache.CacheService,
-	publisher messaging.EventPublisher,
-	logger *zap.Logger,
-) *LinkTypeService {
-	return &LinkTypeService{
-		repo:           repo,
-		objectTypeRepo: objectTypeRepo,
-		cache:          cache,
-		publisher:      publisher,
-		logger:         logger,
+func NewLinkTypeService(config LinkTypeServiceConfig) (*LinkTypeService, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
+
+	return &LinkTypeService{
+		repo:           config.Repository,
+		objectTypeRepo: config.ObjectTypeRepo,
+		cache:          config.Cache,
+		publisher:      config.EventPublisher,
+		logger:         config.Logger,
+	}, nil
 }
 
 // CreateLinkTypeInput represents input for creating a link type
