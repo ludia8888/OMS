@@ -1,0 +1,36 @@
+schema: ${VITE_GRAPHQL_ENDPOINT:http://localhost:8080/graphql}
+documents:
+  - src/graphql/**/*.graphql
+  - src/graphql/**/*.ts
+  - src/graphql/**/*.tsx
+generates:
+  src/graphql/generated/types.ts:
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-react-apollo
+    config:
+      # 엄격한 타입 안전성 설정
+      strictScalars: true
+      avoidOptionals: false
+      maybeValue: T | null
+      enumsAsTypes: true
+      immutableTypes: true
+      nonOptionalTypename: true
+      skipTypename: false
+      dedupeOperationSuffix: true
+      preResolveTypes: true
+      # 스칼라 타입 매핑
+      scalars:
+        ID: string
+        Time: string
+        JSON: Record<string, unknown>
+      # 네이밍 컨벤션
+      namingConvention:
+        typeNames: PascalCase
+        enumValues: UPPER_CASE
+  src/graphql/generated/fragment-matcher.ts:
+    plugins:
+      - fragment-matcher
+    config:
+      useExplicitTyping: true

@@ -1,0 +1,21 @@
+{
+  "entry": ["src/main.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/**/*.test.{ts,tsx}",
+    "src/**/*.spec.{ts,tsx}",
+    "src/test/**/*"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "eslint*",
+    "prettier",
+    "husky",
+    "lint-staged",
+    "@commitlint/*",
+    "vitest",
+    "@vitest/*",
+    "@testing-library/*"
+  ],
+  "ignoreExportsUsedInFile": true
+}

@@ -1,0 +1,149 @@
+# Input Types for OMS Frontend
+# 철칙: 모든 필드는 명시적 타입, nullable 최소화
+
+# Pagination
+input PaginationInput {
+  page: Int!
+  pageSize: Int!
+}
+
+# Sorting
+input SortCriteria {
+  field: String!
+  direction: SortDirection!
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+# Filtering
+input ObjectTypeFilter {
+  apiName: String
+  displayName: String
+  status: [ObjectTypeStatus!]
+  visibility: [Visibility!]
+  tags: [String!]
+  category: String
+  createdAfter: Time
+  createdBefore: Time
+  updatedAfter: Time
+  updatedBefore: Time
+}
+
+input LinkTypeFilter {
+  apiName: String
+  displayName: String
+  status: [LinkTypeStatus!]
+  sourceObjectType: ID
+  targetObjectType: ID
+  cardinality: [Cardinality!]
+  tags: [String!]
+}
+
+# Object Type Inputs
+input CreateObjectTypeInput {
+  apiName: String!
+  displayName: String!
+  pluralDisplayName: String!
+  description: String
+  icon: String
+  color: String
+  tags: [String!]
+  category: String
+  visibility: Visibility!
+  datasources: [String!]
+  capabilities: ObjectTypeCapabilitiesInput!
+}
+
+input UpdateObjectTypeInput {
+  displayName: String
+  pluralDisplayName: String
+  description: String
+  icon: String
+  color: String
+  tags: [String!]
+  category: String
+  visibility: Visibility
+  titleProperty: ID
+  subtitleProperty: ID
+}
+
+input ObjectTypeCapabilitiesInput {
+  searchable: Boolean!
+  writeable: Boolean!
+  deletable: Boolean!
+  versionable: Boolean!
+  auditable: Boolean!
+  timeSeries: Boolean!
+  attachments: Boolean!
+}
+
+# Property Inputs
+input CreatePropertyInput {
+  apiName: String!
+  displayName: String!
+  description: String
+  dataType: DataType!
+  constraints: PropertyConstraintsInput!
+  metadata: PropertyMetadataInput!
+}
+
+input UpdatePropertyInput {
+  displayName: String
+  description: String
+  constraints: PropertyConstraintsInput
+  metadata: PropertyMetadataInput
+}
+
+input PropertyConstraintsInput {
+  required: Boolean!
+  unique: Boolean!
+  multiValued: Boolean!
+  searchable: Boolean!
+  primaryKey: Boolean!
+  minValue: Float
+  maxValue: Float
+  minLength: Int
+  maxLength: Int
+  pattern: String
+  enumValues: [String!]
+}
+
+input PropertyMetadataInput {
+  tags: [String!]
+  category: String
+  defaultValue: String
+  formula: String
+  visibility: Visibility!
+  deprecated: Boolean!
+  deprecationMessage: String
+}
+
+# Link Type Inputs
+input CreateLinkTypeInput {
+  apiName: String!
+  displayName: String!
+  reverseDisplayName: String!
+  description: String
+  sourceObjectType: ID!
+  targetObjectType: ID!
+  cardinality: Cardinality!
+  required: Boolean!
+  cascadeDelete: Boolean!
+  tags: [String!]
+  category: String
+  visibility: Visibility!
+}
+
+input UpdateLinkTypeInput {
+  displayName: String
+  reverseDisplayName: String
+  description: String
+  required: Boolean
+  cascadeDelete: Boolean
+  tags: [String!]
+  category: String
+  visibility: Visibility
+}

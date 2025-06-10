@@ -1,0 +1,22 @@
+{
+  "ignores": [
+    "@types/*",
+    "eslint*",
+    "prettier",
+    "husky",
+    "lint-staged",
+    "@commitlint/*",
+    "vitest",
+    "@vitest/*",
+    "@testing-library/*",
+    "jsdom",
+    "ts-prune",
+    "type-coverage",
+    "madge",
+    "depcheck",
+    "size-limit",
+    "@size-limit/*",
+    "knip"
+  ],
+  "skip-missing": false
+}
