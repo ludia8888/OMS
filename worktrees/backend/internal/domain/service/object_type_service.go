@@ -348,6 +348,21 @@ func (s *ObjectTypeService) CompareVersions(ctx context.Context, id uuid.UUID, v
 	return s.repo.CompareVersions(ctx, id, v1, v2)
 }
 
+// Count counts object types based on filter
+func (s *ObjectTypeService) Count(ctx context.Context, filter repository.ObjectTypeFilter) (int64, error) {
+	return s.repo.Count(ctx, filter)
+}
+
+// GetVersion retrieves a specific version of an object type
+func (s *ObjectTypeService) GetVersion(ctx context.Context, id uuid.UUID, version int) (*repository.ObjectTypeVersion, error) {
+	return s.repo.GetVersion(ctx, id, version)
+}
+
+// ListVersions lists all versions of an object type
+func (s *ObjectTypeService) ListVersions(ctx context.Context, id uuid.UUID) ([]*repository.ObjectTypeVersion, error) {
+	return s.repo.ListVersions(ctx, id)
+}
+
 // invalidateCache invalidates cache entries for an object type
 func (s *ObjectTypeService) invalidateCache(ctx context.Context, id uuid.UUID) {
 	_ = s.cache.Delete(ctx, fmt.Sprintf("object_type:%s", id.String()))

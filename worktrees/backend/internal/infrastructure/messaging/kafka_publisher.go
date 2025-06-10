@@ -40,63 +40,66 @@ func NewKafkaPublisher(brokers []string, topic string, logger *zap.Logger) *Kafk
 }
 
 // Publish publishes an event to Kafka
-func (p *KafkaPublisher) Publish(ctx context.Context, evt event.Event) error {
+func (p *KafkaPublisher) Publish(ctx context.Context, evt Event) error {
+	// Convert to domain event for Kafka
+	domainEvent := evt.ToDomainEvent()
 	// Marshal event data
-	data, err := json.Marshal(evt)
+	data, err := json.Marshal(domainEvent)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	// Create Kafka message
 	message := kafka.Message{
-		Key:   []byte(evt.AggregateID),
+		Key:   []byte(domainEvent.AggregateID),
 		Value: data,
 		Headers: []kafka.Header{
-			{Key: "event_type", Value: []byte(evt.EventType)},
-			{Key: "aggregate_type", Value: []byte(evt.AggregateType)},
-			{Key: "version", Value: []byte(fmt.Sprintf("%d", evt.Version))},
+			{Key: "event_type", Value: []byte(domainEvent.EventType)},
+			{Key: "aggregate_type", Value: []byte(domainEvent.AggregateType)},
+			{Key: "version", Value: []byte(fmt.Sprintf("%d", domainEvent.Version))},
 		},
-		Time: evt.Timestamp,
+		Time: domainEvent.Timestamp,
 	}
 
 	// Publish to Kafka
 	err = p.writer.WriteMessages(ctx, message)
 	if err != nil {
 		p.logger.Error("Failed to publish event",
-			zap.String("event_id", evt.ID),
-			zap.String("event_type", evt.EventType),
-			zap.String("aggregate_id", evt.AggregateID),
+			zap.String("event_id", domainEvent.ID),
+			zap.String("event_type", domainEvent.EventType),
+			zap.String("aggregate_id", domainEvent.AggregateID),
 			zap.Error(err))
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 
 	p.logger.Info("Event published",
-		zap.String("event_id", evt.ID),
-		zap.String("event_type", evt.EventType),
-		zap.String("aggregate_id", evt.AggregateID))
+		zap.String("event_id", domainEvent.ID),
+		zap.String("event_type", domainEvent.EventType),
+		zap.String("aggregate_id", domainEvent.AggregateID))
 
 	return nil
 }
 
 // PublishBatch publishes multiple events to Kafka
-func (p *KafkaPublisher) PublishBatch(ctx context.Context, events []event.Event) error {
+func (p *KafkaPublisher) PublishBatch(ctx context.Context, events []Event) error {
 	messages := make([]kafka.Message, 0, len(events))
 
 	for _, evt := range events {
-		data, err := json.Marshal(evt)
+		domainEvent := evt.ToDomainEvent()
+		data, err := json.Marshal(domainEvent)
 		if err != nil {
-			return fmt.Errorf("failed to marshal event %s: %w", evt.ID, err)
+			return fmt.Errorf("failed to marshal event %s: %w", domainEvent.ID, err)
 		}
 
 		message := kafka.Message{
-			Key:   []byte(evt.AggregateID),
+			Key:   []byte(domainEvent.AggregateID),
 			Value: data,
 			Headers: []kafka.Header{
-				{Key: "event_type", Value: []byte(evt.EventType)},
-				{Key: "aggregate_type", Value: []byte(evt.AggregateType)},
-				{Key: "version", Value: []byte(fmt.Sprintf("%d", evt.Version))},
+				{Key: "event_type", Value: []byte(domainEvent.EventType)},
+				{Key: "aggregate_type", Value: []byte(domainEvent.AggregateType)},
+				{Key: "version", Value: []byte(fmt.Sprintf("%d", domainEvent.Version))},
 			},
-			Time: evt.Timestamp,
+			Time: domainEvent.Timestamp,
 		}
 
 		messages = append(messages, message)
@@ -232,15 +235,13 @@ func NewObjectTypeEventPublisher(publisher *KafkaPublisher) *ObjectTypeEventPubl
 
 // PublishCreated publishes an object type created event
 func (p *ObjectTypeEventPublisher) PublishCreated(ctx context.Context, objectTypeID, userID string, data interface{}) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "object_type.created",
-		AggregateID:   objectTypeID,
-		AggregateType: "object_type",
-		Version:       1,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          data,
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventObjectTypeCreated,
+		EntityID:  objectTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      data,
 	}
 
 	return p.publisher.Publish(ctx, evt)
@@ -248,15 +249,14 @@ func (p *ObjectTypeEventPublisher) PublishCreated(ctx context.Context, objectTyp
 
 // PublishUpdated publishes an object type updated event
 func (p *ObjectTypeEventPublisher) PublishUpdated(ctx context.Context, objectTypeID, userID string, version int, data interface{}) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "object_type.updated",
-		AggregateID:   objectTypeID,
-		AggregateType: "object_type",
-		Version:       version,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          data,
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventObjectTypeUpdated,
+		EntityID:  objectTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      data,
+		Metadata:  map[string]interface{}{"version": version},
 	}
 
 	return p.publisher.Publish(ctx, evt)
@@ -264,15 +264,14 @@ func (p *ObjectTypeEventPublisher) PublishUpdated(ctx context.Context, objectTyp
 
 // PublishDeleted publishes an object type deleted event
 func (p *ObjectTypeEventPublisher) PublishDeleted(ctx context.Context, objectTypeID, userID string, version int) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "object_type.deleted",
-		AggregateID:   objectTypeID,
-		AggregateType: "object_type",
-		Version:       version,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          map[string]interface{}{"deleted": true},
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventObjectTypeDeleted,
+		EntityID:  objectTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      map[string]interface{}{"deleted": true},
+		Metadata:  map[string]interface{}{"version": version},
 	}
 
 	return p.publisher.Publish(ctx, evt)
@@ -292,15 +291,13 @@ func NewLinkTypeEventPublisher(publisher *KafkaPublisher) *LinkTypeEventPublishe
 
 // PublishCreated publishes a link type created event
 func (p *LinkTypeEventPublisher) PublishCreated(ctx context.Context, linkTypeID, userID string, data interface{}) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "link_type.created",
-		AggregateID:   linkTypeID,
-		AggregateType: "link_type",
-		Version:       1,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          data,
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventLinkTypeCreated,
+		EntityID:  linkTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      data,
 	}
 
 	return p.publisher.Publish(ctx, evt)
@@ -308,15 +305,14 @@ func (p *LinkTypeEventPublisher) PublishCreated(ctx context.Context, linkTypeID,
 
 // PublishUpdated publishes a link type updated event
 func (p *LinkTypeEventPublisher) PublishUpdated(ctx context.Context, linkTypeID, userID string, version int, data interface{}) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "link_type.updated",
-		AggregateID:   linkTypeID,
-		AggregateType: "link_type",
-		Version:       version,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          data,
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventLinkTypeUpdated,
+		EntityID:  linkTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      data,
+		Metadata:  map[string]interface{}{"version": version},
 	}
 
 	return p.publisher.Publish(ctx, evt)
@@ -324,15 +320,14 @@ func (p *LinkTypeEventPublisher) PublishUpdated(ctx context.Context, linkTypeID,
 
 // PublishDeleted publishes a link type deleted event
 func (p *LinkTypeEventPublisher) PublishDeleted(ctx context.Context, linkTypeID, userID string, version int) error {
-	evt := event.Event{
-		ID:            generateEventID(),
-		EventType:     "link_type.deleted",
-		AggregateID:   linkTypeID,
-		AggregateType: "link_type",
-		Version:       version,
-		Timestamp:     time.Now(),
-		UserID:        userID,
-		Data:          map[string]interface{}{"deleted": true},
+	evt := Event{
+		ID:        generateEventID(),
+		Type:      EventLinkTypeDeleted,
+		EntityID:  linkTypeID,
+		Actor:     userID,
+		Timestamp: time.Now(),
+		Data:      map[string]interface{}{"deleted": true},
+		Metadata:  map[string]interface{}{"version": version},
 	}
 
 	return p.publisher.Publish(ctx, evt)

@@ -1,0 +1,311 @@
+# OMS GraphQL Schema
+
+scalar Time
+scalar UUID
+
+type Query {
+  # Object Type queries
+  objectType(id: UUID!): ObjectType
+  objectTypes(filter: ObjectTypeFilter, pagination: PaginationInput): ObjectTypeConnection!
+  searchObjectTypes(query: String!, limit: Int = 10): [ObjectType!]!
+  
+  # Link Type queries
+  linkType(id: UUID!): LinkType
+  linkTypes(filter: LinkTypeFilter, pagination: PaginationInput): LinkTypeConnection!
+  linkTypesByObjectTypes(sourceId: UUID!, targetId: UUID!): [LinkType!]!
+  
+  # Version queries
+  objectTypeVersion(objectTypeId: UUID!, version: Int!): ObjectTypeVersion
+  objectTypeVersions(objectTypeId: UUID!): [ObjectTypeVersion!]!
+  compareObjectTypeVersions(objectTypeId: UUID!, v1: Int!, v2: Int!): VersionDiff!
+}
+
+type Mutation {
+  # Object Type mutations
+  createObjectType(input: CreateObjectTypeInput!): ObjectType!
+  updateObjectType(id: UUID!, input: UpdateObjectTypeInput!): ObjectType!
+  deleteObjectType(id: UUID!): Boolean!
+  
+  # Link Type mutations
+  createLinkType(input: CreateLinkTypeInput!): LinkType!
+  updateLinkType(id: UUID!, input: UpdateLinkTypeInput!): LinkType!
+  deleteLinkType(id: UUID!): Boolean!
+}
+
+# Object Type
+type ObjectType {
+  id: UUID!
+  name: String!
+  displayName: String!
+  description: String
+  category: String
+  properties: [Property!]!
+  tags: [String!]!
+  metadata: JSON
+  isDeleted: Boolean!
+  version: Int!
+  createdAt: Time!
+  updatedAt: Time!
+  createdBy: String!
+  updatedBy: String!
+  
+  # Related link types
+  outgoingLinkTypes: [LinkType!]!
+  incomingLinkTypes: [LinkType!]!
+}
+
+type Property {
+  id: UUID!
+  name: String!
+  displayName: String!
+  dataType: DataType!
+  isRequired: Boolean!
+  isArray: Boolean!
+  isUnique: Boolean!
+  defaultValue: JSON
+  validationRules: ValidationRules
+  metadata: JSON
+  order: Int!
+}
+
+type ValidationRules {
+  pattern: String
+  minLength: Int
+  maxLength: Int
+  minValue: Float
+  maxValue: Float
+  enumValues: [String!]
+  customRules: JSON
+}
+
+enum DataType {
+  STRING
+  INTEGER
+  FLOAT
+  BOOLEAN
+  DATE
+  DATETIME
+  JSON
+  UUID
+  REFERENCE
+}
+
+# Link Type
+type LinkType {
+  id: UUID!
+  name: String!
+  displayName: String!
+  inverseDisplayName: String
+  description: String
+  sourceObjectType: ObjectType!
+  targetObjectType: ObjectType!
+  cardinality: Cardinality!
+  properties: [Property!]!
+  constraints: LinkConstraints
+  metadata: JSON
+  isDeleted: Boolean!
+  version: Int!
+  createdAt: Time!
+  updatedAt: Time!
+  createdBy: String!
+  updatedBy: String!
+}
+
+type LinkConstraints {
+  isRequired: Boolean!
+  cascadeDelete: Boolean!
+  preventDelete: Boolean!
+  uniquePerSource: Boolean!
+  uniquePerTarget: Boolean!
+  validationRules: JSON
+}
+
+enum Cardinality {
+  ONE_TO_ONE
+  ONE_TO_MANY
+  MANY_TO_ONE
+  MANY_TO_MANY
+}
+
+# Version Management
+type ObjectTypeVersion {
+  id: UUID!
+  objectTypeId: UUID!
+  version: Int!
+  snapshot: ObjectType!
+  changeDescription: String
+  createdAt: Time!
+  createdBy: String!
+}
+
+type VersionDiff {
+  objectTypeId: UUID!
+  version1: Int!
+  version2: Int!
+  changes: [FieldChange!]!
+}
+
+type FieldChange {
+  field: String!
+  oldValue: JSON
+  newValue: JSON
+  type: ChangeType!
+}
+
+enum ChangeType {
+  ADDED
+  REMOVED
+  MODIFIED
+}
+
+# Filters
+input ObjectTypeFilter {
+  category: String
+  tags: [String!]
+  isDeleted: Boolean
+  createdAfter: Time
+  createdBefore: Time
+  updatedAfter: Time
+  updatedBefore: Time
+}
+
+input LinkTypeFilter {
+  sourceObjectTypeId: UUID
+  targetObjectTypeId: UUID
+  cardinality: Cardinality
+  isDeleted: Boolean
+}
+
+# Pagination
+input PaginationInput {
+  pageSize: Int = 20
+  cursor: String
+  sortBy: String
+  sortOrder: SortOrder = DESC
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ObjectTypeConnection {
+  edges: [ObjectTypeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ObjectTypeEdge {
+  node: ObjectType!
+  cursor: String!
+}
+
+type LinkTypeConnection {
+  edges: [LinkTypeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type LinkTypeEdge {
+  node: LinkType!
+  cursor: String!
+}
+
+# Inputs
+input CreateObjectTypeInput {
+  name: String!
+  displayName: String!
+  description: String
+  category: String
+  properties: [CreatePropertyInput!]
+  tags: [String!]
+  metadata: JSON
+}
+
+input UpdateObjectTypeInput {
+  displayName: String
+  description: String
+  category: String
+  properties: [UpdatePropertyInput!]
+  tags: [String!]
+  metadata: JSON
+}
+
+input CreatePropertyInput {
+  name: String!
+  displayName: String!
+  dataType: DataType!
+  isRequired: Boolean = false
+  isArray: Boolean = false
+  isUnique: Boolean = false
+  defaultValue: JSON
+  validationRules: ValidationRulesInput
+  metadata: JSON
+  order: Int
+}
+
+input UpdatePropertyInput {
+  id: UUID
+  name: String
+  displayName: String
+  dataType: DataType
+  isRequired: Boolean
+  isArray: Boolean
+  isUnique: Boolean
+  defaultValue: JSON
+  validationRules: ValidationRulesInput
+  metadata: JSON
+  order: Int
+}
+
+input ValidationRulesInput {
+  pattern: String
+  minLength: Int
+  maxLength: Int
+  minValue: Float
+  maxValue: Float
+  enumValues: [String!]
+  customRules: JSON
+}
+
+input CreateLinkTypeInput {
+  name: String!
+  displayName: String!
+  inverseDisplayName: String
+  description: String
+  sourceObjectTypeId: UUID!
+  targetObjectTypeId: UUID!
+  cardinality: Cardinality!
+  properties: [CreatePropertyInput!]
+  constraints: LinkConstraintsInput
+  metadata: JSON
+}
+
+input UpdateLinkTypeInput {
+  displayName: String
+  inverseDisplayName: String
+  description: String
+  cardinality: Cardinality
+  properties: [UpdatePropertyInput!]
+  constraints: LinkConstraintsInput
+  metadata: JSON
+}
+
+input LinkConstraintsInput {
+  isRequired: Boolean
+  cascadeDelete: Boolean
+  preventDelete: Boolean
+  uniquePerSource: Boolean
+  uniquePerTarget: Boolean
+  validationRules: JSON
+}
+
+# Scalar for JSON type
+scalar JSON

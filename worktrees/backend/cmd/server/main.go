@@ -11,7 +11,11 @@ import (
 	"time"
 
 	"github.com/openfoundry/oms/internal/config"
+	"github.com/openfoundry/oms/internal/domain/service"
+	"github.com/openfoundry/oms/internal/infrastructure/cache"
 	"github.com/openfoundry/oms/internal/infrastructure/database"
+	"github.com/openfoundry/oms/internal/infrastructure/messaging"
+	"github.com/openfoundry/oms/internal/infrastructure/persistence/postgres"
 	"github.com/openfoundry/oms/internal/interfaces/rest"
 	"github.com/openfoundry/oms/internal/pkg/logger"
 )
@@ -39,8 +43,68 @@ func main() {
 	}
 	defer db.Close()
 
+	// Run migrations
+	if err := database.RunMigrations(db, cfg.Database.MigrationsPath); err != nil {
+		logger.Fatal("Failed to run migrations", "error", err)
+	}
+
+	// Initialize Redis cache
+	redisCache, err := cache.NewRedisCache(
+		cfg.Cache.RedisAddr,
+		cfg.Cache.RedisPassword,
+		cfg.Cache.RedisDB,
+		time.Duration(cfg.Cache.TTL)*time.Second,
+		logger,
+	)
+	if err != nil {
+		logger.Fatal("Failed to initialize Redis cache", "error", err)
+	}
+	defer redisCache.Close()
+
+	// Initialize Kafka publisher
+	kafkaPublisher := messaging.NewKafkaPublisher(
+		cfg.EventBus.KafkaBrokers,
+		cfg.EventBus.KafkaTopic,
+		logger,
+	)
+	defer kafkaPublisher.Close()
+
+	// Initialize repositories
+	objectTypeRepo := postgres.NewObjectTypeRepository(db, logger)
+	linkTypeRepo := postgres.NewLinkTypeRepository(db, logger)
+
+	// Initialize caches
+	objectTypeCache := cache.NewObjectTypeCache(redisCache)
+	linkTypeCache := cache.NewLinkTypeCache(redisCache)
+
+	// Initialize event publishers
+	objectTypeEventPublisher := messaging.NewObjectTypeEventPublisher(kafkaPublisher)
+	linkTypeEventPublisher := messaging.NewLinkTypeEventPublisher(kafkaPublisher)
+
+	// Initialize services
+	objectTypeService := service.NewObjectTypeService(
+		objectTypeRepo,
+		objectTypeCache,
+		objectTypeEventPublisher,
+		logger,
+	)
+
+	linkTypeService := service.NewLinkTypeService(
+		linkTypeRepo,
+		objectTypeRepo,
+		linkTypeCache,
+		linkTypeEventPublisher,
+		logger,
+	)
+
+	// Create services container
+	services := &rest.Services{
+		ObjectTypeService: objectTypeService,
+		LinkTypeService:   linkTypeService,
+	}
+
 	// Initialize router
-	router := rest.NewRouter(cfg, db, logger)
+	router := rest.NewRouter(cfg, services, logger)
 
 	// Create HTTP server
 	srv := &http.Server{
